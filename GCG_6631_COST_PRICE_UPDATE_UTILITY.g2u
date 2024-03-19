@@ -1,0 +1,562 @@
+﻿Program.Sub.ScreenSU.Start
+Gui.Form..Create(BaseForm)
+Gui.Form..Caption("Form")
+Gui.Form..Size(902,307)
+Gui.Form..MinX(0)
+Gui.Form..MinY(0)
+Gui.Form..Position(0,0)
+Gui.Form..AlwaysOnTop(False)
+Gui.Form..FontName("Tahoma")
+Gui.Form..FontSize(8.25)
+Gui.Form..ControlBox(True)
+Gui.Form..MaxButton(True)
+Gui.Form..MinButton(True)
+Gui.Form..MousePointer(0)
+Gui.Form..Moveable(True)
+Gui.Form..Sizeable(True)
+Gui.Form..ShowInTaskBar(True)
+Gui.Form..TitleBar(True)
+Gui.Form..Event(UnLoad,Form_UnLoad)
+Gui.Form.GSGC_All.Create(GsGridControl)
+Gui.Form.GSGC_All.Enabled(True)
+Gui.Form.GSGC_All.Visible(True)
+Gui.Form.GSGC_All.Zorder(0)
+Gui.Form.GSGC_All.Size(894,244)
+Gui.Form.GSGC_All.Position(4,30)
+Gui.Form.GSGC_All.Anchor(15)
+Gui.Form.cmdUpdate.Create(Button)
+Gui.Form.cmdUpdate.Enabled(True)
+Gui.Form.cmdUpdate.Visible(True)
+Gui.Form.cmdUpdate.Zorder(0)
+Gui.Form.cmdUpdate.Size(62,23)
+Gui.Form.cmdUpdate.Position(837,4)
+Gui.Form.cmdUpdate.Caption("Update")
+Gui.Form.cmdUpdate.FontName("Tahoma")
+Gui.Form.cmdUpdate.FontSize(8.25)
+Gui.Form.cmdUpdate.BackColor(16777215)
+Gui.Form.cmdUpdate.ForeColor(0)
+Gui.Form.cmdUpdate.Event(Click,cmdUpdate_Click)
+Gui.Form.chkAll.Create(CheckBox)
+Gui.Form.chkAll.Enabled(True)
+Gui.Form.chkAll.Visible(True)
+Gui.Form.chkAll.Zorder(0)
+Gui.Form.chkAll.Size(93,20)
+Gui.Form.chkAll.Position(3,5)
+Gui.Form.chkAll.Caption("Select All")
+Gui.Form.chkAll.FontName("Tahoma")
+Gui.Form.chkAll.FontSize(8.25)
+Gui.Form.chkAll.Event(Click,chkAll_Click)
+Program.Sub.ScreenSU.End
+Program.Sub.Preflight.Start
+v.Global.sPart.Declare
+v.Global.sRev.Declare
+v.Global.fCost.Declare
+v.Global.fPrice.Declare
+
+Program.Sub.Preflight.End
+Program.Sub.Main.Start
+'Bryan Pham -02/11/2022
+'Quote: 13098
+'Customer: G&V Machine
+'Scope: update price and cost of PO, SO, WO, Router when user changes part price and alt cost.
+
+Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sMsg.Declare
+
+f.Intrinsic.Control.SelectCase(v.Caller.Hook)
+'Inventory master populate hook
+	f.Intrinsic.Control.Case(10120)
+		v.Passed.000068.Set("Update Price")
+'Script 1 button hook
+	f.Intrinsic.Control.Case(10210)
+		v.Global.sPart.Set(v.Passed.000007)
+		v.Global.sRev.Set(v.Passed.000008)
+
+		f.Intrinsic.String.GSSPartString(v.Global.sPart.Trim,v.Global.sRev.Trim,v.Global.sPart)
+		f.Intrinsic.String.Build("Update cost and price for part: {0}",v.Global.sPart,v.Local.sMsg)
+		gui.Form..Caption(v.Local.sMsg)
+		gui.Form..Show
+		
+		f.ODBC.Connection!con.OpenCompanyConnection
+		f.Intrinsic.Control.CallSub("loaddtSOs")
+		f.Intrinsic.Control.CallSub("loaddtPOs")
+		f.Intrinsic.Control.CallSub("loaddtWOs")
+		f.Intrinsic.Control.CallSub("loaddtRouters")
+		f.Intrinsic.Control.CallSub("loaddtAll")
+f.Intrinsic.Control.EndSelect
+
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.loaddtSOs.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	
+	f.Intrinsic.Control.If(v.DataTable.dtSOs.Exists,=,true)
+		f.Data.Datatable.Close("dtSOs")
+	f.Intrinsic.Control.EndIf
+	'load all SOs for selected part
+	f.Intrinsic.String.Build("Select Convert(0,SQL_Bit) as SelectRow,'SO' as TYPE,ORDER_NO + '-' + Left(RECORD_NO,3) as KEYCOLUMN, ORDER_NO as COLUMN1, RECORD_NO as COLUMN2 from  V_ORDER_LINES where LTRIM(RTRIM(PART)) = '{0}';",v.Global.sPart.Trim,v.Local.sSQL)
+	f.Data.Datatable.CreateFromSQL("dtSOs","con",v.Local.sSQL,true)
+	
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.loaddtSOs.End
+
+Program.Sub.loaddtPOs.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	
+	f.Intrinsic.Control.If(v.DataTable.dtPOs.Exists,=,true)
+		f.Data.Datatable.Close("dtPOs")
+	f.Intrinsic.Control.EndIf
+	'load all POs for selected part
+	f.Intrinsic.String.Build("Select Convert(0,SQL_Bit) as SelectRow,'PO' as TYPE,PURCHASE_ORDER + '-' + Left(RECORD_NO,3) as KEYCOLUMN, PURCHASE_ORDER as COLUMN1,RECORD_NO as COLUMN2 from  V_PO_LINES where LTRIM(RTRIM(PART)) = '{0}';",v.Global.sPart.Trim,v.Local.sSQL)
+	f.Data.Datatable.CreateFromSQL("dtPOs","con",v.Local.sSQL,true)
+	
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.loaddtPOs.End
+
+Program.Sub.loaddtWOs.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	
+	f.Intrinsic.Control.If(v.DataTable.dtWOs.Exists,=,true)
+		f.Data.Datatable.Close("dtWOs")
+	f.Intrinsic.Control.EndIf
+	'load all WOs for selected part
+	f.Intrinsic.String.Build("Select Convert(0,SQL_Bit) as SelectRow,'WO' as TYPE,JOB + '-' + SUFFIX as KEYCOLUMN, JOB as COLUMN1 ,SUFFIX as COLUMN2 from V_JOB_HEADER where LTRIM(RTRIM(PART)) = '{0}' and DATE_CLOSED = '1900-01-01';",v.Global.sPart.Trim,v.Local.sSQL)
+	f.Data.Datatable.CreateFromSQL("dtWOs","con",v.Local.sSQL,true)
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.loaddtWOs.End
+
+Program.Sub.loaddtRouters.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	
+	f.Intrinsic.Control.If(v.DataTable.dtRouters.Exists,=,true)
+		f.Data.Datatable.Close("dtRouters")
+	f.Intrinsic.Control.EndIf
+	'load all Routers for selected part
+	f.Intrinsic.String.Build("Select Convert(0,SQL_Bit) as SelectRow,'Router' as TYPE,ROUTER + '-' + LINE_ROUTER as KEYCOLUMN, ROUTER as COLUMN1,LINE_ROUTER as COLUMN2 from V_ROUTER_LINE where LTRIM(RTRIM(PART_WC_OUTSIDE)) = '{0}' and LMO = 'M';",v.Global.sPart.Trim,v.Local.sSQL)
+	f.Data.Datatable.CreateFromSQL("dtRouters","con",v.Local.sSQL,true)
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.loaddtRouters.End
+
+Program.Sub.loaddtAll.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	v.Local.bIssued.Declare(True)
+	v.Local.iCnt.Declare
+	v.Local.sFilter.Declare
+	
+	f.Data.Datatable.Create("dtFinal",true)
+	f.Data.Datatable.AddColumn("dtFinal","SelectRow","Boolean")
+	f.Data.Datatable.AddColumn("dtFinal","TYPE","String")
+	f.Data.Datatable.AddColumn("dtFinal","KEYCOLUMN","String")
+	f.Data.Datatable.AddColumn("dtFinal","COLUMN1","String")
+	f.Data.Datatable.AddColumn("dtFinal","COLUMN2","String")
+	f.Data.Datatable.AddColumn("dtFinal","SO_Cust","String")
+	f.Data.Datatable.AddColumn("dtFinal","PO_Qty","Float")
+	f.Data.Datatable.AddColumn("dtFinal","SO_CustNo","String")
+	f.Data.Datatable.AddColumn("dtFinal","PO_Cost","Float")
+	f.Data.Datatable.AddColumn("dtFinal","SO_Unit_Price","Float")
+	
+	'merge all DTs to final DT to show on a view
+	f.Data.Datatable.Merge("dtSOs","dtFinal",True,2)
+	f.Data.Datatable.Merge("dtPOs","dtFinal",True,2)
+	f.Data.Datatable.Merge("dtWOs","dtFinal",True,2)
+	f.Data.Datatable.Merge("dtRouters","dtFinal",True,2)
+	
+	'check if the WO is issued
+	f.Data.Datatable.AddColumn("dtFinal","Issued","Boolean",True)
+	f.Intrinsic.Control.If(v.DataTable.SeqType2.Exists)
+		f.Data.DataTable.Close("SeqType2")
+	f.Intrinsic.Control.EndIf
+	'seq type 2 is M sequence
+	f.Data.DataTable.CreateFromSQL("SeqType2","con","Select JOB,SFX,SEQTYPE from APSV3_JBLINES where SEQTYPE ='2' and ComplDate is Null;",True)
+	f.Data.DataView.Create("SeqType2","dvSeqType2")
+	
+	f.Intrinsic.Control.For(v.Local.iCnt,0,v.DataTable.dtFinal.RowCount--,1)
+	'leave the box unchecked if it is not WO
+		f.Intrinsic.Control.If(v.DataTable.dtFinal(v.Local.iCnt).TYPE!FieldValTrim,<>,"WO")
+			f.Data.Datatable.SetValue("dtFinal",v.Local.iCnt,"Issued",False)
+		f.Intrinsic.Control.Else
+			f.Intrinsic.String.Build("JOB = '{0}' AND SFX = '{1}'",v.DataTable.dtFinal(v.Local.iCnt).COLUMN1!FieldValTrim,v.DataTable.dtFinal(v.Local.iCnt).COLUMN2!FieldValTrim,v.Local.sFilter)
+			f.Data.DataView.SetFilter("SeqType2","dvSeqType2",v.Local.sFilter)
+	'if dv has something, it means nothing issued
+			f.Intrinsic.Control.If(v.DataView.SeqType2!dvSeqType2.RowCount,>,0)
+				f.Data.Datatable.SetValue("dtFinal",v.Local.iCnt,"Issued",False)
+			f.Intrinsic.Control.EndIf
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+'add customer name for SO
+	f.Data.Datatable.AddExpressionColumn("dtFinal","OrderNo","String","'SO'+ '-' + [COLUMN1]")
+	f.Data.Dictionary.CreateFromSQL("dSOCust","con","Select 'SO'+ '-' +ORDER_NO, RTRIM(CUSTOMER) from V_ORDER_HEADER")
+	f.Data.Dictionary.SetDefaultReturn("dSOCust","")
+	f.Data.DataTable.FillFromDictionary("dtFinal","dSOCust","OrderNo","SO_CustNo")
+	f.Data.Dictionary.Close("dSOCust")
+	
+	f.Data.Dictionary.CreateFromSQL("dCustName","con","Select RTRIM(CUSTOMER),RTRIM(NAME_CUSTOMER) from V_CUSTOMER_MASTER")
+	f.Data.Dictionary.SetDefaultReturn("dCustName","")
+	f.Data.Datatable.FillFromDictionary("dtFinal","dCustName","SO_CustNo","SO_Cust")
+	f.Data.Dictionary.close("dCustName")
+'add PO qty for PO
+	f.Data.Dictionary.CreateFromSQL("dPO_Qty","con","Select PURCHASE_ORDER + '-' + Left(RECORD_NO,3),QTY_ORDER-QTY_RECEIVED-QTY_REJECT from V_PO_Lines")
+	f.Data.Dictionary.SetDefaultReturn("dPO_Qty",0)
+	f.Data.Datatable.FillFromDictionary("dtFinal","dPO_Qty","KEYCOLUMN","PO_Qty")
+	f.Data.Dictionary.close("dPO_Qty")
+'add PO cost for PO
+	f.Data.Dictionary.CreateFromSQL("dPO_Cost","con","Select PURCHASE_ORDER + '-' + Left(RECORD_NO,3),COST from V_PO_Lines")
+	f.Data.Dictionary.SetDefaultReturn("dPO_Cost",0)
+	f.Data.Datatable.FillFromDictionary("dtFinal","dPO_Cost","KEYCOLUMN","PO_Cost")
+	f.Data.Dictionary.close("dPO_Cost")
+'add unit price for SO
+	f.Data.Dictionary.CreateFromSQL("dSO_Unit_Price","con","Select ORDER_NO + '-' + Left(RECORD_NO,3),Discount_Price from V_ORDER_LINES")
+	f.Data.Dictionary.SetDefaultReturn("dSO_Unit_Price",0)
+	f.Data.Datatable.FillFromDictionary("dtFinal","dSO_Unit_Price","KEYCOLUMN","SO_Unit_Price")
+	f.Data.Dictionary.close("dSO_Unit_Price")
+	
+	
+	f.Intrinsic.Control.CallSub("loadGVAll")
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.loaddtAll.End
+
+Program.Sub.UnLoad.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+
+	F.Intrinsic.Control.If(V.ODBC.con.State,=,1)
+		F.ODBC.Connection!con.close
+	F.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End	
+F.Intrinsic.Control.EndTry
+Program.Sub.UnLoad.End
+
+Program.Sub.cmdUpdate_Click.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	v.Local.sFilter.Declare
+	v.Local.sRet.Declare
+'update new cost and price 
+	f.Intrinsic.String.Build("Select AMT_ALT_COST, AMT_PRICE from V_INVENTORY_MSTR where PART = '{0}'",v.Global.sPart,v.local.sSQL)
+	f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSQL,v.Local.sRet)
+	f.Intrinsic.String.Split(v.Local.sRet,"*!*",v.Local.sRet)
+	v.Global.fCost.Set(v.Local.sRet(0))
+	v.Global.fPrice.Set(v.Local.sRet(1))
+	
+	f.Data.DataView.Create("dtFinal","dvSOs",22,"SelectRow = True and TYPE = 'SO'",)
+	f.Intrinsic.Control.If(v.DataView.dtFinal!dvSOs.RowCount,>,0)
+		f.Intrinsic.Control.CallSub(updateSO_Price)
+	f.Intrinsic.Control.EndIf
+	
+	f.Data.DataView.Create("dtFinal","dvPOs",22,"SelectRow = True and TYPE = 'PO'",)
+	f.Intrinsic.Control.If(v.DataView.dtFinal!dvPOs.RowCount,>,0)
+		f.Intrinsic.Control.CallSub(updatePO_Cost)
+	f.Intrinsic.Control.EndIf
+	
+	f.Data.DataView.Create("dtFinal","dvWOs",22,"SelectRow = True and TYPE = 'WO'",)
+	f.Intrinsic.Control.If(v.DataView.dtFinal!dvWOs.RowCount,>,0)
+		f.Intrinsic.Control.CallSub(updateWO_Cost)
+	f.Intrinsic.Control.EndIf
+	
+	f.Data.DataView.Create("dtFinal","dvRouters",22,"SelectRow = True and TYPE = 'Router'",)
+	f.Intrinsic.Control.If(v.DataView.dtFinal!dvRouters.RowCount,>,0)
+		f.Intrinsic.Control.CallSub(updateRouter_Cost)
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.UI.Msgbox("Update successfully!","Notification")
+	F.Intrinsic.Control.CallSub("Unload")	
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdUpdate_Click.End
+
+Program.Sub.loadGVAll.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	
+	gui.Form.GSGC_All.AddGridviewFromDatatable("gvAll","dtFinal")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","COLUMN1","Visible",False)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","COLUMN2","Visible",False)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","OrderNo","Visible",False)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_CustNo","Visible",False)
+	
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SelectRow","Caption","Select")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","TYPE","Caption","Type")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","KEYCOLUMN","Caption","SO/ PO/ WO/ Router")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_Cust","Caption","SO - Cust. Name")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","PO_Qty","Caption","PO - Open Qty")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","PO_Cost","Caption","PO - Cost ($)")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_Unit_Price","Caption","SO - Unit Price ($)")
+	
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll", "SelectRow", "Width", 50)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll", "TYPE", "Width", 80)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll", "KEYCOLUMN", "Width", 120)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll", "Issued", "Width", 80)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll", "SO_Cust", "Width", 150)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll", "PO_Qty", "Width", 85)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll", "PO_Cost", "Width", 100)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll", "SO_Unit_Price", "Width", 100)
+	
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SelectRow","HeaderFontBold",True)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","TYPE","HeaderFontBold",True)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","KEYCOLUMN","HeaderFontBold",True)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","Issued","HeaderFontBold",True)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_Cust","HeaderFontBold",True)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","PO_Qty","HeaderFontBold",True)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","PO_Cost","HeaderFontBold",True)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_Unit_Price","HeaderFontBold",True)
+	
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SelectRow","HeaderHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","TYPE","HeaderHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","KEYCOLUMN","HeaderHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","Issued","HeaderHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_Cust","HeaderHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","PO_Qty","HeaderHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","PO_Cost","HeaderHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_Unit_Price","HeaderHAlignment","Center")
+	
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SelectRow","CellHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","TYPE","CellHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","KEYCOLUMN","CellHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","Issued","CellHAlignment","Center")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_Cust","CellHAlignment","Center")
+	
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SelectRow","AllowEdit",True)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SelectRow","ReadOnly",False)
+	
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","TYPE","AllowEdit",False)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","KEYCOLUMN","AllowEdit",False)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","Issued","AllowEdit",False)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_Cust","AllowEdit",False)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","PO_Qty","AllowEdit",False)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","PO_Cost","AllowEdit",False)
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_Unit_Price","AllowEdit",False)
+	
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll", "PO_Qty", "DisplayCustomNumeric", "n2")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll","SO_Unit_Price","DisplayCustomNumeric","#,###,##0.00")
+	Gui.Form.GSGC_All.SetColumnProperty("gvAll", "PO_Cost", "DisplayCustomNumeric", "n2")
+	
+	
+	gui.Form.GSGC_All.MainView("gvAll")
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.loadGVAll.End
+
+Program.Sub.chkAll_Click.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	
+	f.Intrinsic.Control.If(v.Screen.Form!chkAll.Value,=,1)
+		f.Data.Datatable.SetValue("dtFinal",-1,"SelectRow",True)
+	f.Intrinsic.Control.Else
+		f.Data.Datatable.SetValue("dtFinal",-1,"SelectRow",False)
+	f.Intrinsic.Control.EndIf
+
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.chkAll_Click.End
+
+Program.Sub.updatePO_Cost.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	v.Local.iCnt.Declare
+	V.Local.fExtCost.Declare
+	v.Local.sRet.Declare
+	V.Local.sDtChg.Declare
+	V.Local.sTmChg.Declare
+	
+	'format date and time the change happens
+	F.Intrinsic.String.Format(V.Ambient.Date,"YYYYMMDD",V.Local.sDtChg)
+	F.Intrinsic.String.Format(V.Ambient.Time,"HHNNSSSS",V.Local.sTmChg)
+	
+	'loop thru the selected POs
+	f.Intrinsic.Control.For(v.Local.iCnt,0,v.DataView.dtFinal!dvPOs.RowCount--,1)
+		F.Intrinsic.String.Build("Select QTY_ORDER,FLAG_RECV_CLOSE from PO_LINES where PURCHASE_ORDER = '{0}' and RECORD_NO = '{1}'",V.DataView.dtFinal!dvPOs(V.Local.iCnt).COLUMN1!FieldValTrim,V.DataView.dtFinal!dvPOs(V.Local.iCnt).COLUMN2!FieldValTrim,V.Local.sSQL)
+		F.ODBC.Connection!con.ExecuteAndReturn(V.Local.sSQL,V.Local.sRet)
+		F.Intrinsic.String.Split(V.Local.sRet,"*!*",V.Local.sRet)
+		'if line is still open
+		f.Intrinsic.Control.If(v.Local.sRet(1).Trim,<>,"Y")
+		'calculate new extension
+			F.Intrinsic.Math.Mult(v.Local.sRet(0),V.Global.fCost,V.Local.fExtCost)
+		'update PO line
+			F.Intrinsic.String.Build("Update PO_LINES set COST = '{0}',COST_6_DEC = '{0}',EXTENSION = '{1}',DATE_LAST_CHG = '{2}',TIME_LAST_CHG = '{3}',CHANGED_BY = 'GCG6631' where PURCHASE_ORDER = '{4}' and RECORD_NO = '{5}'",v.Global.fCost,V.Local.fExtCost,V.Local.sDtChg,V.Local.sTmChg,V.DataView.dtFinal!dvPOs(V.Local.iCnt).COLUMN1!FieldValTrim,V.DataView.dtFinal!dvPOs(V.Local.iCnt).COLUMN2!FieldValTrim,V.Local.sSQL)
+			F.ODBC.Connection!con.Execute(V.Local.sSQL)
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.updatePO_Cost.End
+
+Program.Sub.updateSO_Price.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	v.Local.sSOString.Declare
+	v.Local.sSOList.Declare
+	v.Local.sRet.Declare
+	v.Local.sClmn.Declare
+	V.Local.sFiledir.Declare
+	V.Local.sReturnCode.Declare
+
+'build a list of selected SOs
+	f.Data.DataView.ToString("dtFinal","dvSOs","COLUMN1","","%$#",v.Local.sSOList)
+	f.Intrinsic.String.Replace(v.Local.sSOList,"'","''",v.Local.sSOList)
+	f.Intrinsic.String.Replace(v.Local.sSOList,"%$#","','",v.Local.sSOList)	
+'create DT with those SOs - update new price
+	f.Intrinsic.String.Build("select order_no,record_no,price as Old_Price,cast({0} as float) as New_Price,part from V_ORDER_LINES where ORDER_NO in ('{1}') and PART = '{2}'",v.Global.fPrice,v.Local.sSOList,v.Global.sPart,v.Local.sSQL)
+	f.Data.Datatable.CreateFromSQL("dtSO_Upload","con",v.Local.sSQL,true)
+	F.Data.DataTable.AddColumn("dtSO_Upload","lType","string","L")
+	F.Data.DataTable.AddColumn("dtSO_Upload","dmyclmn","string","")
+	F.Data.DataTable.AddColumn("dtSO_Upload","PRICE_SF_1","string","")
+'field list for text file - prepare for callwrapper
+	v.Local.sClmn.Set("lType*!*ORDER_NO*!*Lno*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*PRICE_SF_1*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn*!*dmyclmn")
+	'format fields
+	f.Data.DataTable.AddExpressionColumn("dtSO_Upload","Lno","string","substring(Record_no,1,3)")
+	f.Data.DataTable.SetValueFormat("dtSO_Upload",-1,"New_Price","PRICE_SF_1","0000000000.000000")
+	
+	f.Data.DataView.Create("dtSO_Upload","DVExport")
+	Function.Data.DataView.ToString("dtSO_Upload","DVExport",v.Local.sClmn,",",v.Ambient.NewLine,v.Local.sRet)
+	
+	'cPrice 16 digits - last 6 decimals
+	'Lno = '001
+	'remove decimals
+	f.Intrinsic.String.Replace(v.Local.sRet,".","",v.Local.sRet)
+	
+	f.Data.DataView.Close("dtSO_Upload","DVExport")
+	f.Data.DataTable.Close("dtSO_Upload")
+'create text file for callrapper
+	F.Intrinsic.String.Concat(V.Caller.FilesDir,"\","SOUPDLINES.TXT",V.Local.sFiledir)
+	F.Intrinsic.File.String2File(V.Local.sFiledir,v.Local.sRet)
+'then run callwrapper for updating price	
+	F.Global.Callwrapper.New("Test","Sales.UpdateOrderHeaderAndLinesByFile")
+	F.Global.Callwrapper.SetProperty("Test","Screenless",1)
+	F.Global.Callwrapper.SetProperty("Test","InputFileName","SOUPDLINES.TXT")
+	F.Global.CallWrapper.Run("Test")
+	
+	F.Global.CallWrapper.GetProperty("Test","Status",V.Local.sReturnCode)
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.updateSO_Price.End
+
+Program.Sub.updateWO_Cost.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.iCnt.Declare
+	v.Local.sSQL.Declare
+	v.Local.fCost.Declare
+	v.Local.iCnt2.Declare
+'update cost for selected WOs
+	f.Intrinsic.Control.For(v.Local.iCnt,0,v.DataView.dtFinal!dvWOs.RowCount--,1)
+		f.Intrinsic.String.Build("Select SEQ,PART from V_JOB_OPERATIONS where LMO = 'M' and JOB = '{0}' and SUFFIX = '{1}' and SEQ < 990000",V.DataView.dtFinal!dvWOs(V.Local.iCnt).COLUMN1!FieldValTrim,V.DataView.dtFinal!dvWOs(V.Local.iCnt).COLUMN2!FieldValTrim,v.Local.sSQL)
+		f.Data.Datatable.CreateFromSQL("dtJobs","con",v.Local.sSQL)
+'for each WO, we need to update cost for every material sequences
+		f.Intrinsic.Control.For(v.Local.iCnt2,0,v.DataTable.dtJobs.RowCount--,1)
+			f.Intrinsic.String.Build("Select AMT_ALT_COST from V_INVENTORY_MSTR where PART = '{0}'",v.DataTable.dtJobs(v.Local.iCnt2).PART!FieldValTrim,v.local.sSQL)
+			f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSQL,v.Local.fCost)
+			f.Intrinsic.String.Build("Update JOB_OPERATIONS set BURDEN = {0} where Job = '{1}' and Suffix = '{2}' and SEQ = '{3}'",v.Local.fCost,V.DataView.dtFinal!dvWOs(V.Local.iCnt).COLUMN1!FieldValTrim,V.DataView.dtFinal!dvWOs(V.Local.iCnt).COLUMN2!FieldValTrim,v.DataTable.dtJobs(v.Local.iCnt2).SEQ!FieldValTrim,v.Local.sSQL)
+		f.ODBC.Connection!con.Execute(v.Local.sSQL)
+		f.Intrinsic.Control.Next(v.Local.iCnt2)
+		
+		f.Intrinsic.Control.If(v.DataTable.dtJobs.Exists,=,true)
+			f.Data.Datatable.Close("dtJobs")
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.updateWO_Cost.End
+
+Program.Sub.updateRouter_Cost.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	v.Local.iCnt.Declare
+'update cost for selected routers	
+	f.Intrinsic.Control.For(v.Local.iCnt,0,v.DataView.dtFinal!dvRouters.RowCount--,1)
+		f.Intrinsic.String.Build("Update ROUTER_LINE set RATE = {0} where ROUTER = '{1}' and LINE_ROUTER = '{2}' and LMO = 'M'",v.Global.fCost,V.DataView.dtFinal!dvRouters(V.Local.iCnt).COLUMN1!FieldValTrim,V.DataView.dtFinal!dvRouters(V.Local.iCnt).COLUMN2!FieldValTrim,v.Local.sSQL)
+		f.ODBC.Connection!con.Execute(v.Local.sSQL)
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+	
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub("Unload")	
+F.Intrinsic.Control.EndTry
+Program.Sub.updateRouter_Cost.End
+
+Program.Sub.Form_UnLoad.Start
+	F.Intrinsic.Control.CallSub("Unload")	
+
+Program.Sub.Form_UnLoad.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$bpham$}$20220218134609645$}$Di0riF4Q5RIv6jxva5zSWBaTvp+T0Dt6XeOz8nkQTT/KXADsoqFyPozDrqs3vvjgQ8vf1VGJ83o=
+Program.Sub.Comments.End
